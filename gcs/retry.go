@@ -468,6 +468,21 @@ func (rb *retryBucket) CopyObject(
 	return
 }
 
+func (rb *retryBucket) MoveObject(
+	ctx context.Context,
+	req *MoveObjectRequest) (o *Object, err error) {
+	err = oneShotExpBackoff(
+		ctx,
+		fmt.Sprintf("MoveObject(%q, %q)", req.SrcName, req.DstName),
+		rb.maxSleep,
+		func() (err error) {
+			o, err = rb.wrapped.MoveObject(ctx, req)
+			return
+		})
+
+	return
+}
+
 func (rb *retryBucket) ComposeObjects(
 	ctx context.Context,
 	req *ComposeObjectsRequest) (o *Object, err error) {

@@ -127,6 +127,12 @@ func (b *debugBucket) Name() string {
 	return b.wrapped.Name()
 }
 
+func (b *debugBucket) MoveObject(
+	ctx context.Context,
+	req *MoveObjectRequest) (o *Object, err error) {
+	return b.wrapped.MoveObject(ctx, req)
+}
+
 func (b *debugBucket) NewReader(
 	ctx context.Context,
 	req *ReadObjectRequest) (rc io.ReadCloser, err error) {

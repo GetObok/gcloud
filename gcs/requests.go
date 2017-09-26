@@ -85,6 +85,22 @@ type CopyObjectRequest struct {
 	SrcMetaGenerationPrecondition *int64
 }
 
+// A request to move an object to a new name, preserving all metadata.
+type MoveObjectRequest struct {
+	SrcName string
+	DstName string
+
+	// The generation of the source object to move, or zero for the latest
+	// generation.
+	SrcGeneration int64
+
+	// If non-nil, the destination object will be created/overwritten only if the
+	// current meta-generation for the source object is equal to the given value.
+	//
+	// This is probably only meaningful in conjunction with SrcGeneration.
+	SrcMetaGenerationPrecondition *int64
+}
+
 // MaxSourcesPerComposeRequest is the maximum number of sources that a
 // ComposeObjectsRequest may contain.
 //

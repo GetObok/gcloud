@@ -13,6 +13,7 @@ import (
 	io "io"
 	runtime "runtime"
 	unsafe "unsafe"
+	"errors"
 )
 
 type MockBucket interface {
@@ -69,6 +70,12 @@ func (m *mockBucket) ComposeObjects(p0 context.Context, p1 *ComposeObjectsReques
 	}
 
 	return
+}
+
+func (b *mockBucket) MoveObject(
+	ctx context.Context,
+	req *MoveObjectRequest) (o *Object, err error) {
+	return nil, errors.New("MoveObject not implemented")
 }
 
 func (m *mockBucket) CopyObject(p0 context.Context, p1 *CopyObjectRequest) (o0 *Object, o1 error) {

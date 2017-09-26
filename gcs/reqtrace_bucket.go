@@ -95,6 +95,12 @@ func (b *reqtraceBucket) Name() string {
 	return b.Wrapped.Name()
 }
 
+func (b *reqtraceBucket) MoveObject(
+	ctx context.Context,
+	req *MoveObjectRequest) (o *Object, err error) {
+	return b.Wrapped.MoveObject(ctx, req)
+}
+
 func (b *reqtraceBucket) NewReader(
 	ctx context.Context,
 	req *ReadObjectRequest) (rc io.ReadCloser, err error) {

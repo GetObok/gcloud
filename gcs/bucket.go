@@ -16,6 +16,7 @@ package gcs
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,6 +26,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/api/googleapi"
 	storagev1 "google.golang.org/api/storage/v1"
+
 )
 
 // Bucket represents a GCS bucket, pre-bound with a bucket name and necessary
@@ -73,6 +75,14 @@ type Bucket interface {
 	CopyObject(
 		ctx context.Context,
 		req *CopyObjectRequest) (*Object, error)
+
+	// Move an object to a new name, preserving all metadata. Any existing
+	// generation of the destination name will be overwritten.
+	//
+	// Returns a record for the new object.
+	MoveObject(
+		ctx context.Context,
+		req *MoveObjectRequest) (*Object, error)
 
 	// Compose one or more source objects into a single destination object by
 	// concatenating. Any existing generation of the destination name will be
@@ -132,6 +142,12 @@ type bucket struct {
 func (b *bucket) Name() string {
 	return b.name
 }
+
+func (b *bucket) MoveObject(
+	ctx context.Context,
+	req *MoveObjectRequest) (o *Object, err error) {
+		return nil, errors.New("MoveObject not implemented")
+	}
 
 func (b *bucket) ListObjects(
 	ctx context.Context,
