@@ -235,7 +235,7 @@ type retryObjectReader struct {
 	byteRange  ByteRange
 
 	// nil when we start or have seen a permanent error.
-	wrapped io.ReadCloser
+	wrapped ReadSeekCloser
 
 	// If we've seen an error that we shouldn't retry for, this will be non-nil
 	// and should be returned permanently.
@@ -337,6 +337,17 @@ func (rc *retryObjectReader) Read(p []byte) (n int, err error) {
 	return
 }
 
+func (rc *retryObjectReader) Seek(offset int64, whence int) (n int64, err error) {
+	// If we don't have a wrapped reader, there is nothing useful that we can or
+	// need to do here.
+	if rc.wrapped == nil {
+		return
+	}
+
+	// Call through.
+	return rc.wrapped.Seek(offset, whence)
+}
+
 func (rc *retryObjectReader) Close() (err error) {
 	// If we don't have a wrapped reader, there is nothing useful that we can or
 	// need to do here.
@@ -361,7 +372,7 @@ func (rb *retryBucket) Name() (name string) {
 
 func (rb *retryBucket) NewReader(
 	ctx context.Context,
-	req *ReadObjectRequest) (rc io.ReadCloser, err error) {
+	req *ReadObjectRequest) (rc ReadSeekCloser, err error) {
 	// If the user specified the latest generation, we need to figure out what
 	// that is so that we can create a reader that knows how to keep a stable
 	// generation despite retrying repeatedly.

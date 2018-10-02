@@ -51,7 +51,7 @@ type Bucket interface {
 	//     https://cloud.google.com/storage/docs/json_api/v1/objects/get
 	NewReader(
 		ctx context.Context,
-		req *ReadObjectRequest) (io.ReadCloser, error)
+		req *ReadObjectRequest) (ReadSeekCloser, error)
 
 	// Create or overwrite an object according to the supplied request. The new
 	// object is guaranteed to exist immediately for the purposes of reading (and
@@ -131,6 +131,16 @@ type Bucket interface {
 	DeleteObject(
 		ctx context.Context,
 		req *DeleteObjectRequest) error
+}
+
+type ReadSeekCloser interface {
+	io.ReadCloser
+	io.Seeker
+}
+
+type readSeekCloser struct{
+    io.ReadCloser
+    io.Seeker
 }
 
 type bucket struct {

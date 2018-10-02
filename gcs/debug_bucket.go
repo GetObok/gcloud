@@ -94,11 +94,22 @@ type debugReader struct {
 	requestID uint64
 	desc      string
 	startTime time.Time
-	wrapped   io.ReadCloser
+	wrapped   ReadSeekCloser
 }
 
 func (dr *debugReader) Read(p []byte) (n int, err error) {
 	n, err = dr.wrapped.Read(p)
+
+	// Don't log EOF errors, which are par for the course.
+	if err != nil && err != io.EOF {
+		dr.bucket.requestLogf(dr.requestID, "-> Read error: %v", err)
+	}
+
+	return
+}
+
+func (dr *debugReader) Seek(offset int64, whence int) (n int64, err error) {
+	n, err = dr.wrapped.Seek(offset, whence)
 
 	// Don't log EOF errors, which are par for the course.
 	if err != nil && err != io.EOF {
@@ -135,7 +146,7 @@ func (b *debugBucket) MoveObject(
 
 func (b *debugBucket) NewReader(
 	ctx context.Context,
-	req *ReadObjectRequest) (rc io.ReadCloser, err error) {
+	req *ReadObjectRequest) (rc ReadSeekCloser, err error) {
 	id, desc, start := b.startRequest("Read(%q, %v)", req.Name, req.Range)
 
 	// Call through.
