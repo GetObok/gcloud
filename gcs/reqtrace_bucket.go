@@ -36,7 +36,7 @@ type reqtraceBucket struct {
 // An io.ReadCloser that reports the outcome of the read operation represented
 // by the wrapped io.ReadCloser once it is known.
 type reportingReadCloser struct {
-	Wrapped io.ReadCloser
+	Wrapped ReadSeekCloser
 
 	// Set to nil after it is called.
 	Report reqtrace.ReportFunc
@@ -58,6 +58,27 @@ func (rc *reportingReadCloser) Read(p []byte) (n int, err error) {
 	if err == io.EOF {
 		return
 	}
+
+	// Report other errors.
+	if err != nil {
+		rc.Report(err)
+		rc.Report = nil
+		return
+	}
+
+	return
+}
+
+func (rc *reportingReadCloser) Seek(offset int64, whence int) (n int64, err error) {
+	// Have we already seen an error? Make sure we don't get ourselves into a
+	// state where we report twice.
+	if rc.Report == nil {
+		err = errors.New("reportingReadCloser already reported its outcome")
+		return
+	}
+
+	// Call through.
+	n, err = rc.Wrapped.Seek(offset, whence)
 
 	// Report other errors.
 	if err != nil {
@@ -103,7 +124,7 @@ func (b *reqtraceBucket) MoveObject(
 
 func (b *reqtraceBucket) NewReader(
 	ctx context.Context,
-	req *ReadObjectRequest) (rc io.ReadCloser, err error) {
+	req *ReadObjectRequest) (rc ReadSeekCloser, err error) {
 	var report reqtrace.ReportFunc
 
 	// Start a span.

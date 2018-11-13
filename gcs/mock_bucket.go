@@ -10,7 +10,6 @@ import (
 	fmt "fmt"
 	oglemock "github.com/jacobsa/oglemock"
 	context "golang.org/x/net/context"
-	io "io"
 	runtime "runtime"
 	unsafe "unsafe"
 	"errors"
@@ -213,7 +212,7 @@ func (m *mockBucket) Name() (o0 string) {
 	return
 }
 
-func (m *mockBucket) NewReader(p0 context.Context, p1 *ReadObjectRequest) (o0 io.ReadCloser, o1 error) {
+func (m *mockBucket) NewReader(p0 context.Context, p1 *ReadObjectRequest) (o0 ReadSeekCloser, o1 error) {
 	// Get a file name and line number for the caller.
 	_, file, line, _ := runtime.Caller(1)
 
@@ -231,7 +230,7 @@ func (m *mockBucket) NewReader(p0 context.Context, p1 *ReadObjectRequest) (o0 io
 
 	// o0 io.ReadCloser
 	if retVals[0] != nil {
-		o0 = retVals[0].(io.ReadCloser)
+		o0 = retVals[0].(ReadSeekCloser)
 	}
 
 	// o1 error

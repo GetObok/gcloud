@@ -30,7 +30,7 @@ import (
 
 func (b *bucket) NewReader(
 	ctx context.Context,
-	req *ReadObjectRequest) (rc io.ReadCloser, err error) {
+	req *ReadObjectRequest) (rc ReadSeekCloser, err error) {
 	// Construct an appropriate URL.
 	//
 	// The documentation (https://goo.gl/9zeA98) is vague about how this is
@@ -105,7 +105,7 @@ func (b *bucket) NewReader(
 				typed.Code == http.StatusRequestedRangeNotSatisfiable {
 				err = nil
 				googleapi.CloseBody(httpRes)
-				rc = ioutil.NopCloser(strings.NewReader(""))
+				rc = readSeekCloser{ioutil.NopCloser(strings.NewReader("")),nil}
 			}
 		}
 
@@ -113,7 +113,7 @@ func (b *bucket) NewReader(
 	}
 
 	// The body contains the object data.
-	rc = httpRes.Body
+	rc = readSeekCloser{httpRes.Body, nil}
 
 	// If the user requested a range and we didn't see HTTP 416 above, we require
 	// an HTTP 206 response and must truncate the body. See the notes on
@@ -127,7 +127,7 @@ func (b *bucket) NewReader(
 			return
 		}
 
-		rc = newLimitReadCloser(rc, bodyLimit)
+		rc = readSeekCloser{newLimitReadCloser(rc, bodyLimit), nil}
 	}
 
 	return
