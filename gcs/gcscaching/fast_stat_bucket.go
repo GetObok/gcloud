@@ -16,7 +16,6 @@ package gcscaching
 
 import (
 	"fmt"
-	"io"
 	"sync"
 	"time"
 
@@ -28,12 +27,14 @@ import (
 
 // Create a bucket that caches object records returned by the supplied wrapped
 // bucket. Records are invalidated when modifications are made through this
-// bucket, and after the supplied TTL.
+// bucket, and after the supplied TTL. Parameter 'negcache' enables negative
+// results caching, i.e. when StatObject returns NotFound, this result will be cached.
 func NewFastStatBucket(
 	ttl time.Duration,
 	cache StatCache,
 	clock timeutil.Clock,
-	wrapped gcs.Bucket) (b gcs.Bucket) {
+	wrapped gcs.Bucket,
+	negcache bool) (b gcs.Bucket) {
 	fsb := &fastStatBucket{
 		cache:   cache,
 		clock:   clock,
@@ -62,7 +63,8 @@ type fastStatBucket struct {
 	// Constant data
 	/////////////////////////
 
-	ttl time.Duration
+	ttl      time.Duration
+	negcache bool
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -121,7 +123,7 @@ func (b *fastStatBucket) Name() string {
 
 func (b *fastStatBucket) NewReader(
 	ctx context.Context,
-	req *gcs.ReadObjectRequest) (rc io.ReadCloser, err error) {
+	req *gcs.ReadObjectRequest) (rc gcs.ReadSeekCloser, err error) {
 	rc, err = b.wrapped.NewReader(ctx, req)
 	return
 }
@@ -207,7 +209,7 @@ func (b *fastStatBucket) StatObject(
 	o, err = b.wrapped.StatObject(ctx, req)
 	if err != nil {
 		// Special case: NotFoundError -> negative entry.
-		if _, ok := err.(*gcs.NotFoundError); ok {
+		if _, ok := err.(*gcs.NotFoundError); ok && b.negcache {
 			b.addNegativeEntry(req.Name)
 		}
 
@@ -262,4 +264,24 @@ func (b *fastStatBucket) DeleteObject(
 	b.invalidate(req.Name)
 	err = b.wrapped.DeleteObject(ctx, req)
 	return
+}
+
+// LOCKS_EXCLUDED(b.mu)
+func (b *fastStatBucket) MoveObject(
+	ctx context.Context,
+	req *gcs.MoveObjectRequest) (*gcs.Object, error) {
+
+	b.invalidate(req.SrcName)
+	b.invalidate(req.DstName)
+
+	// Move the object.
+	o, err := b.wrapped.MoveObject(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Record the new version.
+	b.insert(o)
+
+	return o, nil
 }
